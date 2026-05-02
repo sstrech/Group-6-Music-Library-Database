@@ -2,12 +2,230 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Group 6 Music Library</title>
     <style>
 
+        /*hide the sections always when not active*/
+        .view-section {
+            display: none;
+        }
+        /*show the active section*/
+        .view-section.active {
+            display: block;
+        }
+        /*let the user know which page is active with bold button */
+        .active-btn {
+            font-weight: bold;
+            background-color: #bfbfbf;
+        }
     </style>
 </head>
 <body>
-    
+    <nav class="navigation bar">
+        <div>
+            <h1>Group 6 Music Library</h1>
+        </div>
+        <div>
+            <!--buttons for navigation, when selected the others are hidden-->
+            <button class="nav-btn" onclick="nav('home')" data-target="home">
+                <i>Home</i>
+            </button>
+            <button class="nav-btn" onclick="nav('search')" data-target="search">
+                <i>Search & Filter</i>
+            </button>
+            <button class="nav-btn" onclick="nav('playlists')" data-target="playlists">
+                <i>My Playlists</i>
+            </button>
+            <button class="nav-btn" onclick="nav('following')" data-target="following">
+                <i>Following</i>
+            </button>
+            <button class="nav-btn" onclick="nav('upload')" data-target="upload">
+                <i>Artist Upload</i>
+            </button>
+        </div>
+        <div>
+            <a href="login.html">
+                <i>Logout</i>
+            </a>
+        </div>
+    </nav>
+
+    <main>
+        <div id="main-container">
+            
+            <!--home page, view-section active allows it to be displayed-->
+            <section id="view-home" class="view-section active">
+                <div>
+                    <h2>Welcome Back</h2>
+                    <div>
+                        <h3>Listening History</h3>
+                        <p>Jump back into what you were listening to.</p>
+                        <div>
+                            <table border="5">
+                                <thead>
+                                    <tr>
+                                        <th>Song</th>
+                                        <th>Artist</th>
+                                        <th>Played At</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-list">
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!--searching page, look for songs, uses view-section-->
+            <section id="view-search" class="view-section">
+                <h2>Library Search</h2>
+                <div>
+                    <input type="text" id="s-name" placeholder="Song Name...">
+                    <input type="text" id="s-artist" placeholder="Artist...">
+                    <input type="text" id="s-album" placeholder="Album..." >
+                    <select id="s-genre" >
+                        <option value="">All Genres</option>
+                        <option value="Pop">Pop</option>
+                        <option value="Rock">Rock</option>
+                        <option value="Hip Hop">Hip Hop</option>
+                        <option value="Electronic">Electronic</option>
+                        <option value="Jazz">Jazz</option>
+                    </select>
+                </div>
+                
+                <div id="search-results">
+
+                </div>
+            </section>
+
+            <!--playlists page, uses view-section-->
+            <section id="view-playlists" class="view-section">
+                <div>
+                    <h2>My Playlists</h2>
+                    <div>
+                        <input type="text" id="new-pl-name" placeholder="New Playlist Name">
+                        <button onclick="createPlaylist()">Create</button>
+                    </div>
+                </div>
+                <div id="playlists-container">
+
+                </div>
+
+                <div id="playlist-detail" style="display:none; border:1px solid #000; padding: 10px; margin-top: 20px;">
+                    <div>
+                        <h3 id="detail-pl-name">Playlist Name</h3>
+                        <button onclick="closePlaylistDetail()"><i>Close</i></button>
+                    </div>
+                    <div id="detail-pl-songs">
+
+                    </div>
+                </div>
+            </section>
+
+            <!--follows page, uses view-section-->
+            <section id="view-following" class="view-section">
+                <h2>Followed Artists</h2>
+                <div id="follows-container">
+
+                </div>
+            </section>
+
+            <!--upload a song page, uses view-section-->
+            <section id="view-upload" class="view-section">
+                <div>
+                    <div>
+                        <i></i>
+                        <h2>Upload Music</h2>
+                    </div>
+                    <form id="upload-form" onsubmit="handleUpload(event)">
+                        <div>
+                            <label>(*) Required Field</label>
+                        </div>
+                        <br>
+                        <div>
+                            <label>Song Title *</label>
+                            <input type="text" id="up-title" required>
+                        </div>
+                        <div>
+                            <label>Artist Name *</label>
+                            <input type="text" id="up-artist" required>
+                        </div>
+                        <div>
+                            <div>
+                                <label>Album (Optional)</label>
+                                <input type="text" id="up-album">
+                            </div>
+                            <div>
+                                <label>Genre *</label>
+                                <select id="up-genre" required>                                    
+                                    <option value="R&B">R&B</option>
+                                    <option value="Pop">Pop</option>
+                                    <option value="Country">Country</option>
+                                    <option value="Blues">Blues</option>
+                                    <option value="Lo-Fi">Lo-Fi</option>
+                                    <option value="Reggaeton">Reggaeton</option>
+                                    <option value="Jazz">Jazz</option>
+                                    <option value="Folk">Folk</option>
+                                    <option value="Latin">Latin</option>
+                                    <option value="Ambient">Ambient</option>
+                                    <option value="Reggae">Reggae</option>
+                                    <option value="Ska">Ska</option>
+                                    <option value="K-Pop">K-Pop</option>
+                                    <option value="Gospel">Gospel</option>
+                                    <option value="Trance">Trance</option>
+                                    <option value="Afrobeats">Afrobeats</option>
+                                    <option value="Disco">Disco</option>
+                                    <option value="House">House</option>
+                                    <option value="Indie">Indie</option>
+                                    <option value="Hip Hop">Hip Hop</option>
+                                    <option value="Soul">Soul</option>
+                                    <option value="Electronic">Electronic</option>
+                                    <option value="Grunge">Grunge</option>
+                                    <option value="Punk">Punk</option>
+                                    <option value="Funk">Funk</option>
+                                    <option value="Alternative">Alternative</option>
+                                    <option value="Classical">Classical</option>
+                                    <option value="Techno">Techno</option>
+                                    <option value="Metal">Metal</option>
+                                </select>
+                            </div>
+                        </div>
+                        <br>
+                        <button type="submit">Publish Song</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </main>
+    <script>
+        //nav function, allows for switching sections, makes sections visible.
+        function nav(viewId) {
+            //make all section hidden
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            //add acctive to the button selected
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            //update buttons to match, actvie is bolded
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active-btn');
+                if(btn.dataset.target === viewId) {
+                    btn.classList.add('active-btn');
+                }
+            });
+            if (viewId === 'search' && typeof renderSearch === 'function') renderSearch();
+            if (viewId === 'playlists' && typeof renderPlaylists === 'function') renderPlaylists();
+            if (viewId === 'following' && typeof renderFollowing === 'function') renderFollowing();
+            if (viewId === 'home' && typeof renderHome === 'function') renderHome();
+        }
+
+        //initial loading in, show home page
+        window.onload = ()=>{
+            nav('home');
+        };
+    </script>
 </body>
 </html>
