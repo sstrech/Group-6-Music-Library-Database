@@ -54,7 +54,7 @@ def signup():
     cur.close(); conn.close()
     return send_from_directory('.', 'login.html')
 
-#Login─
+#Login
 @app.route('/login-process', methods=['POST'])
 def login():
     username = request.form.get('login-username')
