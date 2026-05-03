@@ -1,37 +1,46 @@
-from flask import Flask, request, jsonify, send_from_directory, session
+from flask import Flask, request, jsonify, send_from_directory, session, render_template
 import psycopg2
 import psycopg2.extras
 import bcrypt
-from datetime import date
 import os
+from datetime import date
 from dotenv import load_dotenv
+
+load_dotenv()
+required_vars = ["DB_NAME", "USERNAME", "PASSWORD", "HOST", "PORT"]
+for var in required_vars:
+    if not os.getenv(var):
+        raise ValueError(f"Missing environment variable: {var}")
 
 app = Flask(__name__, static_folder='.')
 app.secret_key = 'group6-music-library-secret-key'
 
-load_dotenv()
-
-# Connect to PostgreSQL
 DB_CONFIG = {
     "dbname": os.getenv("DB_NAME"),
     "user": os.getenv("USERNAME"),
     "password": os.getenv("PASSWORD"),
     "host": os.getenv("HOST"),
-    "port": os.getenv("PORT")
+    "port": int(os.getenv("PORT", "5432"))
 }
+
 def get_conn():
     return psycopg2.connect(**DB_CONFIG)
 
 #Serve HTML
 @app.route('/')
 def serve_login():
-    return send_from_directory('templates', 'login.html')
+    return render_template('login.html')
 
 @app.route('/index.html')
 def serve_index():
     if 'user_id' not in session:
-        return send_from_directory('templates', 'login.html')
-    return send_from_directory('templates', 'index.html')
+        return render_template('login.html')
+    return render_template('index.html', username=session.get('username'))
+
+@app.route('/login.html')
+def login_html_route():
+    session.clear()  # Clear session on logout
+    return render_template('login.html')
 
 #Signup
 @app.route('/signup-process', methods=['POST'])
@@ -56,7 +65,7 @@ def signup():
         cur.close(); conn.close()
         return "Username or email already exists.", 409
     cur.close(); conn.close()
-    return send_from_directory('templates', 'login.html')
+    return render_template('login.html')
 
 #Login
 @app.route('/login-process', methods=['POST'])
@@ -73,14 +82,14 @@ def login():
     if user and bcrypt.checkpw(password.encode(), user['u_passwordhash'].encode()):
         session['user_id']  = user['u_userid']
         session['username'] = user['u_username']
-        return send_from_directory('templates', 'index.html')
+        return render_template('index.html', username=session.get('username'))
     return "Invalid username or password.", 401
 
 #Logout
 @app.route('/logout')
 def logout():
     session.clear()
-    return send_from_directory('templates', 'login.html')
+    return render_template('login.html')
 
 #Who is logged in
 @app.route('/api/me')
