@@ -5,6 +5,7 @@ import bcrypt
 import os
 from datetime import date
 from dotenv import load_dotenv
+from werkzeug.utils import redirect
 
 load_dotenv()
 required_vars = ["DB_NAME", "USERNAME", "PASSWORD", "HOST", "PORT"]
@@ -62,10 +63,12 @@ def signup():
         )
         conn.commit()
     except psycopg2.errors.UniqueViolation:
-        cur.close(); conn.close()
-        return "Username or email already exists.", 409
-    cur.close(); conn.close()
-    return render_template('login.html')
+        cur.close()
+        conn.close()
+        return render_template('login.html', signup_error="Username or email already exists.")
+    cur.close();
+    conn.close()
+    return render_template('login.html', signup_success="Account created successfully! Please log in.")
 
 #Login
 @app.route('/login-process', methods=['POST'])
@@ -75,15 +78,23 @@ def login():
 
     conn = get_conn()
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM Users WHERE u_Username = %s", (username,))
-    user = cur.fetchone()
-    cur.close(); conn.close()
+    try:
+        cur.execute("SELECT * FROM Users WHERE u_Username = %s", (username,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        if user and bcrypt.checkpw(password.encode(), user['u_passwordhash'].encode()):
+            session['user_id'] = user['u_userid']
+            session['username'] = user['u_username']
+            return render_template('index.html', username=session.get('username'))
+    except Exception as e:
+        cur.close()
+        conn.close()
+        return render_template('login.html', login_error=e)
+    cur.close()
+    conn.close()
+    return render_template('login.html', login_error="Username or password incorrect.")
 
-    if user and bcrypt.checkpw(password.encode(), user['u_passwordhash'].encode()):
-        session['user_id']  = user['u_userid']
-        session['username'] = user['u_username']
-        return render_template('index.html', username=session.get('username'))
-    return "Invalid username or password.", 401
 
 #Logout
 @app.route('/logout')

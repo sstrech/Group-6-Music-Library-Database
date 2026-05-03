@@ -70,7 +70,13 @@
 
                     <button type="submit">Login</button>
                 </form>
-
+                <div class="login-message">
+                    {% if login_error %}
+                        <div class="login-message error" style="color: red;">
+                            {{ login_error }}
+                        </div>
+                    {% endif %}
+                </div>
 
             </div>
         </div>
@@ -115,6 +121,18 @@
 
                     <button type="submit">Sign Up</button>
                 </form>
+                <div class="signup-message">
+                    {% if signup_error %}
+                        <div class="signup-message error" style="color: red;">
+                            {{ signup_error }}
+                        </div>
+                    {% endif %}
+                    {% if signup_success %}
+                        <div class="signup-message success" style="color: green;">
+                            {{ signup_success }}
+                        </div>
+                    {% endif %}
+                </div>
             </div>
 
 
@@ -122,4 +140,5 @@
 
     </div>
 </body>
+
 </html>
