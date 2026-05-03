@@ -9,8 +9,8 @@ app.secret_key = 'group6-music-library-secret-key'
 
 DB_CONFIG = {
     "dbname": "musiclibrary",
-    "user": "postgres",
-    "password": "your_password",
+    "user": "your_postgres_username", #CHANGE THIS
+    "password": "your_postgres_password", #CHANGE THIS
     "host": "localhost",
     "port": 5432
 }
@@ -18,7 +18,7 @@ DB_CONFIG = {
 def get_conn():
     return psycopg2.connect(**DB_CONFIG)
 
-# ── Serve HTML ────────────────────────────────────────────────────────────────
+#Serve HTML
 @app.route('/')
 def serve_login():
     return send_from_directory('.', 'login.html')
@@ -29,7 +29,7 @@ def serve_index():
         return send_from_directory('.', 'login.html')
     return send_from_directory('.', 'index.html')
 
-# ── Signup ────────────────────────────────────────────────────────────────────
+#Signup
 @app.route('/signup-process', methods=['POST'])
 def signup():
     username  = request.form.get('signup-username')
@@ -54,7 +54,7 @@ def signup():
     cur.close(); conn.close()
     return send_from_directory('.', 'login.html')
 
-# ── Login ─────────────────────────────────────────────────────────────────────
+#Login─
 @app.route('/login-process', methods=['POST'])
 def login():
     username = request.form.get('login-username')
@@ -72,20 +72,20 @@ def login():
         return send_from_directory('.', 'index.html')
     return "Invalid username or password.", 401
 
-# ── Logout ────────────────────────────────────────────────────────────────────
+#Logout
 @app.route('/logout')
 def logout():
     session.clear()
     return send_from_directory('.', 'login.html')
 
-# ── Who is logged in ──────────────────────────────────────────────────────────
+#Who is logged in
 @app.route('/api/me')
 def me():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
     return jsonify({'user_id': session['user_id'], 'username': session['username']})
 
-# ── Listen History ────────────────────────────────────────────────────────────
+#Listen History 
 @app.route('/api/history')
 def get_history():
     if 'user_id' not in session:
@@ -124,7 +124,7 @@ def add_history():
     cur.close(); conn.close()
     return jsonify({'success': True})
 
-# ── Search Songs ──────────────────────────────────────────────────────────────
+#Search Songs
 @app.route('/api/songs')
 def search_songs():
     name   = request.args.get('name', '')
@@ -155,7 +155,7 @@ def search_songs():
     cur.close(); conn.close()
     return jsonify(rows)
 
-# ── Playlists ─────────────────────────────────────────────────────────────────
+#Playlists
 @app.route('/api/playlists')
 def get_playlists():
     if 'user_id' not in session:
@@ -256,7 +256,7 @@ def remove_song_from_playlist(pl_id, song_id):
     cur.close(); conn.close()
     return jsonify({'success': True})
 
-# ── Following ─────────────────────────────────────────────────────────────────
+#Following
 @app.route('/api/following')
 def get_following():
     if 'user_id' not in session:
@@ -310,7 +310,7 @@ def unfollow_user(followed_id):
     cur.close(); conn.close()
     return jsonify({'success': True})
 
-# ── Song Ratings ──────────────────────────────────────────────────────────────
+#Song Ratings
 @app.route('/api/ratings/song', methods=['POST'])
 def rate_song():
     if 'user_id' not in session:
@@ -330,7 +330,7 @@ def rate_song():
     cur.close(); conn.close()
     return jsonify({'success': True})
 
-# ── Artist Upload ─────────────────────────────────────────────────────────────
+#Artist Upload
 @app.route('/api/upload', methods=['POST'])
 def upload_song():
     if 'user_id' not in session:
@@ -370,6 +370,6 @@ def upload_song():
     cur.close(); conn.close()
     return jsonify({'success': True})
 
-# ── Run ───────────────────────────────────────────────────────────────────────
+#Run
 if __name__ == '__main__':
     app.run(debug=True)
