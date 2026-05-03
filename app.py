@@ -3,31 +3,35 @@ import psycopg2
 import psycopg2.extras
 import bcrypt
 from datetime import date
+import os
+from dotenv import load_dotenv
 
 app = Flask(__name__, static_folder='.')
 app.secret_key = 'group6-music-library-secret-key'
 
-DB_CONFIG = {
-    "dbname": "musiclibrary",
-    "user": "your_postgres_username", #CHANGE THIS
-    "password": "your_postgres_password", #CHANGE THIS
-    "host": "localhost",
-    "port": 5432
-}
+load_dotenv()
 
+# Connect to PostgreSQL
+DB_CONFIG = {
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("USERNAME"),
+    "password": os.getenv("PASSWORD"),
+    "host": os.getenv("HOST"),
+    "port": os.getenv("PORT")
+}
 def get_conn():
     return psycopg2.connect(**DB_CONFIG)
 
 #Serve HTML
 @app.route('/')
 def serve_login():
-    return send_from_directory('.', 'login.html')
+    return send_from_directory('templates', 'login.html')
 
 @app.route('/index.html')
 def serve_index():
     if 'user_id' not in session:
-        return send_from_directory('.', 'login.html')
-    return send_from_directory('.', 'index.html')
+        return send_from_directory('templates', 'login.html')
+    return send_from_directory('templates', 'index.html')
 
 #Signup
 @app.route('/signup-process', methods=['POST'])
@@ -52,7 +56,7 @@ def signup():
         cur.close(); conn.close()
         return "Username or email already exists.", 409
     cur.close(); conn.close()
-    return send_from_directory('.', 'login.html')
+    return send_from_directory('templates', 'login.html')
 
 #Login
 @app.route('/login-process', methods=['POST'])
@@ -69,14 +73,14 @@ def login():
     if user and bcrypt.checkpw(password.encode(), user['u_passwordhash'].encode()):
         session['user_id']  = user['u_userid']
         session['username'] = user['u_username']
-        return send_from_directory('.', 'index.html')
+        return send_from_directory('templates', 'index.html')
     return "Invalid username or password.", 401
 
 #Logout
 @app.route('/logout')
 def logout():
     session.clear()
-    return send_from_directory('.', 'login.html')
+    return send_from_directory('templates', 'login.html')
 
 #Who is logged in
 @app.route('/api/me')
