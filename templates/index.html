@@ -175,9 +175,19 @@
 
             <!--follows page, uses view-section-->
             <section id="view-following" class="view-section">
-                <h2>Followed Artists</h2>
-                <div id="follows-container">
+                <h2>Following</h2>
 
+                <!--search for users to follow-->
+                <div style="margin-bottom: 15px;">
+                    <h3>Find Users</h3>
+                    <input type="text" id="follow-search" placeholder="Search username...">
+                    <button onclick="searchUsersToFollow()">Search</button>
+                    <div id="follow-search-results"></div>
+                </div>
+
+                <!--list of users you currently follow-->
+                <h3>You Follow</h3>
+                <div id="follows-container">
                 </div>
             </section>
 
@@ -609,6 +619,117 @@
                 alert(`Rated song ${songId} with ${rating} star(s)!`);
             } else {
                 alert('Failed to rate song.');
+            }
+        }
+
+        //load and display the list of users the current user is following
+        async function renderFollowing() {
+            const container = document.getElementById('follows-container');
+            container.innerHTML = 'Loading...';
+
+            try {
+                const res = await fetch('/api/following');
+                if (res.status === 401) {
+                    container.innerHTML = '<p>Please log in to see who you follow.</p>';
+                    return;
+                }
+                const follows = await res.json();
+
+                if (!follows.length) {
+                    container.innerHTML = '<p>You are not following anyone yet. Search above to find users.</p>';
+                    return;
+                }
+
+                //build a card for each followed user with an unfollow button
+                container.innerHTML = '';
+                follows.forEach(u => {
+                    const div = document.createElement('div');
+                    div.style = 'border: 1px solid #000; padding: 8px; margin: 8px 0;';
+                    //format the date if its present, otherwise show N/A
+                    let since = 'N/A';
+                    if (u.f_createdat) {
+                        since = new Date(u.f_createdat).toLocaleDateString();
+                    }
+                    div.innerHTML = `
+                        <strong>${u.u_username}</strong> — Followed since: ${since}
+                        <button onclick="unfollowUser(${u.u_userid})">Unfollow</button>`;
+                    container.appendChild(div);
+                });
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">Error loading: ${err.message}</p>`;
+            }
+        }
+
+        //search Users by username so the current user can pick someone to follow
+        async function searchUsersToFollow() {
+            const q = document.getElementById('follow-search').value.trim();
+            const results = document.getElementById('follow-search-results');
+
+            if (!q) { results.innerHTML = '<p>Enter a username to search.</p>'; return; }
+
+            try {
+                const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+                if (res.status === 401) {
+                    results.innerHTML = '<p>Please log in.</p>';
+                    return;
+                }
+                const users = await res.json();
+
+                if (!users.length) {
+                    results.innerHTML = '<p>No users found.</p>';
+                    return;
+                }
+
+                //show each match with a Follow button
+                results.innerHTML = '';
+                users.forEach(u => {
+                    const div = document.createElement('div');
+                    div.style = 'padding: 4px; margin: 4px 0;';
+                    div.innerHTML = `
+                        <span>${u.u_username}</span>
+                        <button onclick="followUser(${u.u_userid})">Follow</button>`;
+                    results.appendChild(div);
+                });
+            } catch (err) {
+                results.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+            }
+        }
+
+        //POST to /api/following to insert into Follows table
+        async function followUser(userId) {
+            try {
+                const res = await fetch('/api/following', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ followed_id: userId })
+                });
+
+                if (res.ok) {
+                    alert('Now following!');
+                    renderFollowing(); // refresh the followed list
+                } else if (res.status === 409) {
+                    alert('You already follow this user.');
+                } else {
+                    alert('Failed to follow user.');
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
+            }
+        }
+
+        //DELETE from Follows table
+        async function unfollowUser(userId) {
+            if (!confirm('Unfollow this user?')) return;
+
+            try {
+                const res = await fetch(`/api/following/${userId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    renderFollowing(); // refresh
+                } else {
+                    alert('Failed to unfollow.');
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
             }
         }
     </script>

@@ -7,7 +7,7 @@ from datetime import date
 from dotenv import load_dotenv
 from werkzeug.utils import redirect
 
-load_dotenv()
+load_dotenv(override=True)
 required_vars = ["DB_NAME", "USERNAME", "PASSWORD", "HOST", "PORT","SECRET_KEY"]
 for var in required_vars:
     if not os.getenv(var):
@@ -346,6 +346,30 @@ def unfollow_user(followed_id):
     conn.commit()
     cur.close(); conn.close()
     return jsonify({'success': True})
+
+#Search users by username (for the Following page so user can pick someone to follow)
+@app.route('/api/users/search')
+def search_users():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    q = request.args.get('q', '').strip()
+    if not q:
+        return jsonify([])
+
+    conn = get_conn()
+    cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    # exclude yourself from results so user can't follow themselves
+    cur.execute("""
+        SELECT u_UserID, u_Username
+        FROM Users
+        WHERE u_Username ILIKE %s AND u_UserID != %s
+        ORDER BY u_Username
+        LIMIT 25
+    """, ('%' + q + '%', session['user_id']))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return jsonify(rows)
 
 #Song Ratings
 @app.route('/api/ratings/song', methods=['POST'])
