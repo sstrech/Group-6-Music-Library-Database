@@ -135,6 +135,7 @@
                             <th>Genre</th>
                             <th>Duration (s)</th>
                             <th>Release Date</th>
+                            <th>Rating</th>
                             <th>Song ID</th>
                             <th>Action</th>
                         </tr>
@@ -310,6 +311,11 @@
                                 date = new Date(song.s_releasedate).toLocaleDateString(); 
                             } 
 
+                            let rating = 'Not Rated';
+                            if (song.avg_rating) {
+                                rating = song.avg_rating + ' / 5';
+                            }
+
                             row.innerHTML = `
                                 <td><strong>${song.s_name}</strong></td>
                                 <td>${(song.artist_name || 'Unknown')}</td>
@@ -317,6 +323,7 @@
                                 <td>${(song.genre_name || 'N/A')}</td>
                                 <td>${song.s_length || 'N/A'}</td>
                                 <td>${date}</td>
+                                <td>${rating}</td>
                                 <td><code>${song.s_songid}</code></td>
                                 <td>
                                     <button onclick="playSong(${song.s_songid})">(Press) Play Song!</button>
@@ -324,6 +331,15 @@
                                         <option value="">Select Playlist</option>
                                     </select>
                                     <button onclick="addToPlaylist(${song.s_songid})">Add to Playlist</button>
+                                    <select id="rate-${song.s_songid}">
+                                        <option value="">Rate...</option>
+                                        <option value="1">1 Star</option>
+                                        <option value="2">2 Stars</option>
+                                        <option value="3">3 Stars</option>
+                                        <option value="4">4 Stars</option>
+                                        <option value="5">5 Stars</option>
+                                    </select>
+                                    <button onclick="rateSong(${song.s_songid})">Rate</button>
                                 </td>
                             `;
                             resultsList.appendChild(row);
@@ -429,7 +445,7 @@
                 const div = document.createElement('div');
                 div.style = 'border: 1px solid #000; padding: 8px; margin: 8px 0;';
                 div.innerHTML = `
-                    <strong>${pl.pl_name}</strong> — Created: ${pl.pl_createdat}
+                    <strong>${pl.pl_name}</strong> — Created: ${new Date(pl.pl_createdat).toLocaleDateString()}
                     <button onclick="openPlaylist(${pl.pl_playlistid}, '${pl.pl_name}')">View Songs</button>
                     <button onclick="deletePlaylist(${pl.pl_playlistid})">Delete</button>`;
                 container.appendChild(div);
@@ -575,6 +591,26 @@
             });
         }
 
+        async function rateSong(songId) {
+            //read the selected rating from the dropdown for this specific song
+            const rating = document.getElementById(`rate-${songId}`).value;
+
+            //make sure user selects rating before sending
+            if (!rating) { alert('Please select a rating first.'); return;}
+
+            //send POST request to Flask
+            const res = await fetch('/api/ratings/song', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ song_id: songId, rating: parseInt(rating) })
+            });
+
+            if (res.ok) {
+                alert(`Rated song ${songId} with ${rating} star(s)!`);
+            } else {
+                alert('Failed to rate song.');
+            }
+        }
     </script>
 </body>
 </html>
