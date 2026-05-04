@@ -60,13 +60,14 @@
                     <div>
                         <h3>Listening History</h3>
                         <p>Jump back into what you were listening to.</p>
+                        <button id="refresh-history" onclick="refreshHistory()">Refresh History</button>
                         <div>
                             <table border="5">
                                 <thead>
                                     <tr>
                                         <th>Song</th>
                                         <th>Artist</th>
-                                        <th>Played At</th>
+                                        <th>Last Played</th>
                                     </tr>
                                 </thead>
                                 <tbody id="history-list">
@@ -80,25 +81,72 @@
 
             <!--searching page, look for songs, uses view-section-->
             <section id="view-search" class="view-section">
-                <h2>Library Search</h2>
-                <div>
-                    <input type="text" id="s-name" placeholder="Song Name...">
-                    <input type="text" id="s-artist" placeholder="Artist...">
-                    <input type="text" id="s-album" placeholder="Album..." >
-                    <select id="s-genre" >
-                        <option value="">All Genres</option>
-                        <option value="Pop">Pop</option>
-                        <option value="Rock">Rock</option>
-                        <option value="Hip Hop">Hip Hop</option>
-                        <option value="Electronic">Electronic</option>
-                        <option value="Jazz">Jazz</option>
-                    </select>
-                </div>
-                
-                <div id="search-results">
+            <h2>Library Search</h2>
+            <div style="margin-bottom: 15px;">
 
-                </div>
-            </section>
+                <form id="search-form">
+                    <input type="text" name="search-name" placeholder="Song Name...">
+                    <input type="text" name="search-artist" placeholder="Artist...">
+                    <input type="text" name="search-album" placeholder="Album...">
+                    <select name="search-genre">
+                        <option value="">All Genres</option>
+                        <option value="R&B">R&B</option>
+                        <option value="Pop">Pop</option>
+                        <option value="Country">Country</option>
+                        <option value="Blues">Blues</option>
+                        <option value="Lo-Fi">Lo-Fi</option>
+                        <option value="Reggaeton">Reggaeton</option>
+                        <option value="Jazz">Jazz</option>
+                        <option value="Folk">Folk</option>
+                        <option value="Latin">Latin</option>
+                        <option value="Ambient">Ambient</option>
+                        <option value="Reggae">Reggae</option>
+                        <option value="Ska">Ska</option>
+                        <option value="K-Pop">K-Pop</option>
+                        <option value="Gospel">Gospel</option>
+                        <option value="Trance">Trance</option>
+                        <option value="Afrobeats">Afrobeats</option>
+                        <option value="Disco">Disco</option>
+                        <option value="House">House</option>
+                        <option value="Indie">Indie</option>
+                        <option value="Hip Hop">Hip Hop</option>
+                        <option value="Soul">Soul</option>
+                        <option value="Electronic">Electronic</option>
+                        <option value="Grunge">Grunge</option>
+                        <option value="Punk">Punk</option>
+                        <option value="Funk">Funk</option>
+                        <option value="Alternative">Alternative</option>
+                        <option value="Classical">Classical</option>
+                        <option value="Techno">Techno</option>
+                        <option value="Metal">Metal</option>
+                    </select>
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+
+
+            <div id="search-results" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc;">
+                <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead style="position: sticky; top: 0; background: #f1f1f1; z-index: 1;">
+                        <tr>
+                            <th>Song Title</th>
+                            <th>Artist</th>
+                            <th>Album</th>
+                            <th>Genre</th>
+                            <th>Duration (s)</th>
+                            <th>Release Date</th>
+                            <th>Song ID</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="search-results-list">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 10px;">Enter search criteria and click Search</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
             <!--playlists page, uses view-section-->
             <section id="view-playlists" class="view-section">
@@ -159,7 +207,8 @@
                             </div>
                             <div>
                                 <label>Genre *</label>
-                                <select id="up-genre" required>                                    
+                                <select id="up-genre" required>
+                                    <option value="">All Genres</option>
                                     <option value="R&B">R&B</option>
                                     <option value="Pop">Pop</option>
                                     <option value="Country">Country</option>
@@ -226,6 +275,133 @@
         window.onload = ()=>{
             nav('home');
         };
+
+<!--        Event listener for the search table. Gives a get to the flask app and gets the post back with form details-->
+        document.addEventListener("DOMContentLoaded", () => {
+            const searchForm = document.getElementById('search-form');
+            // when form button is clicked
+            if (searchForm) {
+                //create listener for json back
+                searchForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const resultsList = document.getElementById('search-results-list');
+                    const formData = new FormData(searchForm);
+                    const parameters = new URLSearchParams(formData);
+
+                    try {
+                        const response = await fetch(`/api/songs?${parameters.toString()}`);
+                        if (!response.ok) throw new Error('Search failed');
+                        const songs = await response.json();
+
+                        resultsList.innerHTML = ''; 
+
+                        if (songs.length === 0) { 
+                            resultsList.innerHTML = `<tr><td colspan="8" style="text-align: center;">No songs match search</td></tr>`;
+                            return; 
+                        }
+
+                        //get songs (the json) back from flask, format for table
+                        songs.forEach(song => { 
+                            const row = document.createElement('tr');
+
+                            
+                            let date = 'N/A'; 
+                            if (song.s_releasedate) {
+                                date = song.s_releasedate; 
+                            } 
+
+                            row.innerHTML = `
+                                <td><strong>${song.s_name}</strong></td>
+                                <td>${(song.artist_name || 'Unknown')}</td>
+                                <td>${(song.album_name || 'N/A')}</td>
+                                <td>${(song.genre_name || 'N/A')}</td>
+                                <td>${song.s_length || 'N/A'}</td>
+                                <td>${date}</td>
+                                <td><code>${song.s_songid}</code></td>
+                                <td>
+                                    <button onclick="playSong(${song.s_songid})">(Press) Play Song!</button>
+                                </td>
+                            `;
+                            resultsList.appendChild(row);
+                        });
+
+                    } catch (error) { 
+                        resultsList.innerHTML = `<tr><td colspan="8" style="text-align: center; color: red;">Encountered an error searching: ${error.message}</td></tr>`;
+                    }
+                });
+            }
+        });
+
+        // listener for the play song button when searching or other parts
+        async function playSong(songId) { 
+            try {
+                //go to flask and get response
+                const response = await fetch('/api/addhistory', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ song_id: songId })
+                }); 
+                //check if logged into current sesh
+                if (response.status === 401) {
+                    alert('Please log in to save your history.');
+                    return;
+                }
+                //get the json back, success
+                const data = await response.json();
+                if (data.success) {
+                    alert('Song added to history!'); 
+                }
+            } catch (error) {
+                console.error('Error:', error); 
+            }
+        }
+
+        //listener for refresh history button
+        async function refreshHistory() {
+
+            const historyList = document.getElementById('history-list');
+            try {
+                //send to flask
+                const response = await fetch('/api/gethistory');
+                //check sesh
+                if (response.status === 401) {
+                    alert('Please log in to view your history.');
+                    return;
+                }
+                //get the json back
+                const history = await response.json();
+                historyList.innerHTML = '';
+
+                if (history.length === 0) { 
+                    historyList.innerHTML = `<tr><td colspan="3" style="text-align: center;">No listening history found.</td></tr>`;
+                    return; 
+                }
+                //populate the table with rows
+                history.forEach(entry => { 
+                    const row = document.createElement('tr');
+
+                    let playedAt = 'N/A';
+                    if (entry.time) {
+                        const dateStr = String(entry.time);
+                        if (dateStr.length === 8) {
+                            playedAt = `${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}/${dateStr.substring(0, 4)}`;
+                        } else {
+                            playedAt = new Date(entry.time).toLocaleDateString();
+                        }
+                    } 
+                    row.innerHTML = `
+                        <td>${entry.song}</td>
+                        <td>${entry.artist || 'Unknown'}</td>
+                        <td>${playedAt}</td>
+                    `;
+                    historyList.appendChild(row);
+                });
+            } catch (error) {
+                //error to table
+                historyList.innerHTML = `<tr><td colspan="3" style="text-align: center; color: red;">Error loading history: ${error.message}</td></tr>`;
+            }
+
+        }
     </script>
 </body>
 </html>
