@@ -66,7 +66,7 @@ def signup():
         cur.close()
         conn.close()
         return render_template('login.html', signup_error="Username or email already exists.")
-    cur.close();
+    cur.close()
     conn.close()
     return render_template('login.html', signup_success="Account created successfully! Please log in.")
 
@@ -110,7 +110,7 @@ def me():
     return jsonify({'user_id': session['user_id'], 'username': session['username']})
 
 #Listen History 
-@app.route('/api/history')
+@app.route('/api/gethistory')
 def get_history():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
@@ -118,7 +118,7 @@ def get_history():
     conn = get_conn()
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
-        SELECT s.s_Name AS song, u.u_Username AS artist, lh.lr_ListenedTime AS played_at
+        SELECT s.s_Name AS song, u.u_Username AS artist, lh.lr_ListenedTime AS time
         FROM ListenHistory lh
         JOIN Songs s   ON lh.lr_SongID  = s.s_SongID
         JOIN Artists a ON s.s_ArtistID  = a.art_ArtistID
@@ -128,10 +128,12 @@ def get_history():
         LIMIT 20
     """, (session['user_id'],))
     rows = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return jsonify(rows)
 
-@app.route('/api/history', methods=['POST'])
+#Add to Listen History
+@app.route('/api/addhistory', methods=['POST'])
 def add_history():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
@@ -141,43 +143,50 @@ def add_history():
     cur  = conn.cursor()
     cur.execute("""
         INSERT INTO ListenHistory (lr_ListenedTime, lr_UserID, lr_SongID)
-        VALUES (%s, %s, %s)
+        VALUES (TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER, %s, %s)
         ON CONFLICT (lr_UserID, lr_SongID) DO UPDATE SET lr_ListenedTime = EXCLUDED.lr_ListenedTime
-    """, (int(date.today().strftime('%Y%m%d')), session['user_id'], song_id))
+    """, (session['user_id'], song_id))
     conn.commit()
-    cur.close(); conn.close()
+    cur.close(); conn.close() 
     return jsonify({'success': True})
 
 #Search Songs
-@app.route('/api/songs')
+@app.route('/api/songs', methods=['GET', 'POST'])
 def search_songs():
-    name   = request.args.get('name', '')
-    artist = request.args.get('artist', '')
-    album  = request.args.get('album', '')
-    genre  = request.args.get('genre', '')
+    name   = request.args.get('search-name', '')
+    artist = request.args.get('search-artist', '')
+    album  = request.args.get('search-album', '')
+    genre  = request.args.get('search-genre', '')
 
     conn = get_conn()
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    # try:
     cur.execute("""
-        SELECT s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
-               u.u_Username AS artist_name,
-               g.g_Name     AS genre_name,
-               al.al_Name   AS album_name
-        FROM Songs s
-        LEFT JOIN Artists a      ON s.s_ArtistID    = a.art_ArtistID
-        LEFT JOIN Users u        ON a.art_UserID     = u.u_UserID
-        LEFT JOIN Genres g       ON s.s_GenreID      = g.g_GenreID
-        LEFT JOIN AlbumSongs als ON s.s_SongID       = als.als_SongID
-        LEFT JOIN Albums al      ON als.als_AlbumID  = al.al_AlbumID
-        WHERE (%s = '' OR s.s_Name     ILIKE '%%' || %s || '%%')
-          AND (%s = '' OR u.u_Username ILIKE '%%' || %s || '%%')
-          AND (%s = '' OR al.al_Name   ILIKE '%%' || %s || '%%')
-          AND (%s = '' OR g.g_Name     ILIKE %s)
-        LIMIT 50
-    """, (name, name, artist, artist, album, album, genre, genre))
+            SELECT s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
+                   u.u_Username AS artist_name,
+                   g.g_Name     AS genre_name,
+                   al.al_Name   AS album_name
+            FROM Songs s
+            LEFT JOIN Artists a      ON s.s_ArtistID    = a.art_ArtistID
+            LEFT JOIN Users u        ON a.art_UserID     = u.u_UserID
+            LEFT JOIN Genres g       ON s.s_GenreID      = g.g_GenreID
+            LEFT JOIN AlbumSongs als ON s.s_SongID       = als.als_SongID
+            LEFT JOIN Albums al      ON als.als_AlbumID  = al.al_AlbumID
+            WHERE (%s = '' OR s.s_Name     ILIKE '%%' || %s || '%%')
+              AND (%s = '' OR u.u_Username ILIKE '%%' || %s || '%%')
+              AND (%s = '' OR al.al_Name   ILIKE '%%' || %s || '%%')
+              AND (%s = '' OR g.g_Name     ILIKE %s)
+            LIMIT 50
+        """, (name, name, artist, artist, album, album, genre, genre))
     rows = cur.fetchall()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
     return jsonify(rows)
+    # except Exception as e:
+    #     print(f"Error Here: {e}")
+    #     return e
+    cur.close()
+    conn.close()
 
 #Playlists
 @app.route('/api/playlists')
