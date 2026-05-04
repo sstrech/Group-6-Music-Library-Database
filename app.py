@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from werkzeug.utils import redirect
 
 load_dotenv()
-required_vars = ["DB_NAME", "USERNAME", "PASSWORD", "HOST", "PORT"]
+required_vars = ["DB_NAME", "USERNAME", "PASSWORD", "HOST", "PORT","SECRET_KEY"]
 for var in required_vars:
     if not os.getenv(var):
         raise ValueError(f"Missing environment variable: {var}")

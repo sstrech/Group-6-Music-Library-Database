@@ -324,6 +324,15 @@
                                         <option value="">Select Playlist</option>
                                     </select>
                                     <button onclick="addToPlaylist(${song.s_songid})">Add to Playlist</button>
+                                    <select id="rate-${song.s_songid}">
+                                        <option value="">Rate...</option>
+                                        <option value="1">1 Star</option>
+                                        <option value="2">2 Stars</option>
+                                        <option value="3">3 Stars</option>
+                                        <option value="4">4 Stars</option>
+                                        <option value="5">5 Stars</option>
+                                    </select>
+                                    <button onclick="rateSong(${song.s_songid})">Rate</button>
                                 </td>
                             `;
                             resultsList.appendChild(row);
@@ -575,6 +584,26 @@
             });
         }
 
+        async function rateSong(songId) {
+            //read the selected rating from the dropdown for this specific song
+            const rating = document.getElementById(`rate-${songId}`).value;
+
+            //make sure user selects rating before sending
+            if (!rating) { alert('Please select a rating first.'); return;}
+
+            //send POST request to Flask
+            const res = await fetch('/api/ratings/song', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ song_id: songId, rating: parseInt(rating) })
+            });
+
+            if (res.ok) {
+                alert(`Rated song ${songId} with ${rating} star(s)!`);
+            } else {
+                alert('Failed to rate song.');
+            }
+        }
     </script>
 </body>
 </html>
