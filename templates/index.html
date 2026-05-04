@@ -135,6 +135,7 @@
                             <th>Genre</th>
                             <th>Duration (s)</th>
                             <th>Release Date</th>
+                            <th>Rating</th>
                             <th>Song ID</th>
                             <th>Action</th>
                         </tr>
@@ -310,6 +311,11 @@
                                 date = new Date(song.s_releasedate).toLocaleDateString(); 
                             } 
 
+                            let rating = 'Not Rated';
+                            if (song.avg_rating) {
+                                rating = song.avg_rating + ' / 5';
+                            }
+
                             row.innerHTML = `
                                 <td><strong>${song.s_name}</strong></td>
                                 <td>${(song.artist_name || 'Unknown')}</td>
@@ -317,6 +323,7 @@
                                 <td>${(song.genre_name || 'N/A')}</td>
                                 <td>${song.s_length || 'N/A'}</td>
                                 <td>${date}</td>
+                                <td>${rating}</td>
                                 <td><code>${song.s_songid}</code></td>
                                 <td>
                                     <button onclick="playSong(${song.s_songid})">(Press) Play Song!</button>

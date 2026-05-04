@@ -162,21 +162,24 @@ def search_songs():
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     # try:
     cur.execute("""
-            SELECT DISTINCT ON (s.s_SongID)
-                   s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
+            SELECT s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
                    u.u_Username AS artist_name,
                    g.g_Name     AS genre_name,
-                   al.al_Name   AS album_name
+                   al.al_Name   AS album_name,
+                   ROUND(AVG(sr.sr_Rating), 1) AS avg_rating
             FROM Songs s
             LEFT JOIN Artists a      ON s.s_ArtistID    = a.art_ArtistID
             LEFT JOIN Users u        ON a.art_UserID     = u.u_UserID
             LEFT JOIN Genres g       ON s.s_GenreID      = g.g_GenreID
             LEFT JOIN AlbumSongs als ON s.s_SongID       = als.als_SongID
             LEFT JOIN Albums al      ON als.als_AlbumID  = al.al_AlbumID
+            LEFT JOIN SongRatings sr ON s.s_SongID       = sr.sr_SongID
             WHERE (%s = '' OR s.s_Name     ILIKE '%%' || %s || '%%')
               AND (%s = '' OR u.u_Username ILIKE '%%' || %s || '%%')
               AND (%s = '' OR al.al_Name   ILIKE '%%' || %s || '%%')
               AND (%s = '' OR g.g_Name     ILIKE %s)
+            GROUP BY s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate, 
+                     u.u_Username, g.g_Name, al.al_Name
             LIMIT 50
         """, (name, name, artist, artist, album, album, genre, genre))
     rows = cur.fetchall()
