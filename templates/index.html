@@ -198,7 +198,7 @@
                         <i></i>
                         <h2>Upload Music</h2>
                     </div>
-                    <form id="upload-form" onsubmit="handleUpload(event)">
+                    <form id="upload-form" onsubmit="uploadSong(event)">
                         <div>
                             <label>(*) Required Field</label>
                         </div>
@@ -219,7 +219,6 @@
                             <div>
                                 <label>Genre *</label>
                                 <select id="up-genre" required>
-                                    <option value="">All Genres</option>
                                     <option value="R&B">R&B</option>
                                     <option value="Pop">Pop</option>
                                     <option value="Country">Country</option>
@@ -605,6 +604,43 @@
             });
         }
 
+        async function uploadSong(event){
+            //use event stop resubmish
+            event.preventDefault();
+
+            //get the input
+            const title  = document.getElementById('up-title').value.trim();
+            const artist = document.getElementById('up-artist').value.trim();
+            const album  = document.getElementById('up-album').value.trim();
+            const genre  = document.getElementById('up-genre').value; 
+            //required check for input
+            if (!title || !artist || !genre) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, artist, album, genre })
+                });
+                //get json back wit message
+                const data = await res.json();
+
+                if (res.ok && data.success) { 
+                    //let user know success,
+                    alert(data.message || 'Song uploaded successfully!'); 
+                    document.getElementById('upload-form').reset();
+                } else {
+                    //tell user with eeror
+                    alert('Failed to upload song: '+(data.error)); 
+                }
+            } catch (error) { 
+                console.error("Upload failed:", error);
+                alert('Another error occurred.');
+            } 
+        }
+          
         async function rateSong(songId) {
             //read the selected rating from the dropdown for this specific song
             const rating = document.getElementById(`rate-${songId}`).value;
