@@ -370,39 +370,82 @@ def upload_song():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
 
-    data       = request.json
-    title      = data.get('title')
-    genre_name = data.get('genre')
-    length     = data.get('length', 180)
-    release    = data.get('release_date', str(date.today()))
+    #fields for upload
+    data = request.json or {}
+    title = data.get('title', '').strip()
+    artist_name = data.get('artist', '').strip()
+    album_name = data.get('album', '').strip()
+    genre_name = data.get('genre', '').strip()
+
+    #if the fields title, artist, or genre are not filled out, return error fill out all fields
+    if not title or not artist_name or not genre_name:
+        return jsonify({'error': 'You need to fill out Song Name, Artist, and Genre at least.'})
 
     conn = get_conn()
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        #get the genre id from genre name, or create new
+        cur.execute("SELECT g_GenreID FROM Genres WHERE g_Name = %s", (genre_name,))
+        genre = cur.fetchone()
+        if not genre:
+            return jsonify({'error': f"Genre '{genre_name}' not found."})
+        genre_id = genre['g_genreid']
 
-    # Get genre ID — must already exist
-    cur.execute("SELECT g_GenreID FROM Genres WHERE g_Name = %s", (genre_name,))
-    genre = cur.fetchone()
-    if not genre:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Genre not found'}), 400
-    genre_id = genre['g_genreid']
-
-    # Get or create artist record for this user
-    cur.execute("SELECT art_ArtistID FROM Artists WHERE art_UserID = %s", (session['user_id'],))
-    artist = cur.fetchone()
-    if not artist:
-        cur.execute("INSERT INTO Artists (art_UserID) VALUES (%s) RETURNING art_ArtistID", (session['user_id'],))
+        #get the artistid from artist name, or create new
+        cur.execute("SELECT art_ArtistID FROM Artists WHERE art_UserID = %s", (session['user_id'],))
         artist = cur.fetchone()
-    artist_id = artist['art_artistid']
+        if not artist:
+            cur.execute("INSERT INTO Artists (art_UserID) VALUES (%s) RETURNING art_ArtistID", (session['user_id'],))
+            artist = cur.fetchone()
+        artist_id = artist['art_artistid']
 
-    # Insert the song
-    cur.execute(
-        "INSERT INTO Songs (s_Name, s_Length, s_ReleaseDate, s_ArtistID, s_GenreID) VALUES (%s,%s,%s,%s,%s)",
-        (title, length, release, artist_id, genre_id)
-    )
-    conn.commit()
-    cur.close(); conn.close()
-    return jsonify({'success': True})
+        #create the song with the three major ones
+        cur.execute(""" 
+                INSERT INTO Songs (s_Name, s_Length, s_ReleaseDate, s_ArtistID, s_GenreID) 
+            VALUES (%s, FLOOR(100 + random() * 300)::int, CURRENT_DATE, %s, %s)
+            RETURNING s_SongID""",(title, artist_id, genre_id))
+        #get sonid for other db updates
+        song = cur.fetchone()
+        song_id = song['s_songid']
+
+        #update albums and albumsongs based on the song if album provded
+        if album_name:
+            #see if exists alraedy
+            cur.execute("SELECT al_AlbumID FROM albums WHERE al_name ILIKE %s",(album_name,))
+            album = cur.fetchone()
+
+            if album:
+                album_id = album['al_albumid']
+                #album exists, add song to albumsongs connection
+                cur.execute("""
+                        INSERT INTO AlbumSongs (als_AlbumID, als_SongID) 
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING""",(album_id, song_id))
+            else:
+                #create a new album, add album and song too
+                cur.execute("""
+                        INSERT INTO Albums (al_releasedate, al_artistid, al_genreID, al_name) 
+                    VALUES (CURRENT_DATE, %s, %s, %s) 
+                    RETURNING al_AlbumID""", (artist_id, genre_id, album_name))
+                new_album = cur.fetchone()
+
+                cur.execute("""
+                        INSERT INTO AlbumSongs (als_AlbumID, als_SongID) 
+                    VALUES (%s, %s)""",(new_album['al_albumid'], song_id))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Song uploaded successfully!'})
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Upload Error: {e}")
+        return jsonify({'error': 'Encountered an error uploading the song.'}), 500
+
+    cur.close()
+    conn.close()
 
 #Run
 if __name__ == '__main__':
