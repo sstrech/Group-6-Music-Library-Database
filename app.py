@@ -7,8 +7,8 @@ from datetime import date
 from dotenv import load_dotenv
 from werkzeug.utils import redirect
 
-load_dotenv()
-required_vars = ["DB_NAME", "USERNAME", "PASSWORD", "HOST", "PORT"]
+load_dotenv(override=True)
+required_vars = ["DB_NAME", "USERNAME", "PASSWORD", "HOST", "PORT","SECRET_KEY"]
 for var in required_vars:
     if not os.getenv(var):
         raise ValueError(f"Missing environment variable: {var}")
@@ -162,21 +162,24 @@ def search_songs():
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     # try:
     cur.execute("""
-            SELECT DISTINCT ON (s.s_SongID)
-                   s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
+            SELECT s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
                    u.u_Username AS artist_name,
                    g.g_Name     AS genre_name,
-                   al.al_Name   AS album_name
+                   al.al_Name   AS album_name,
+                   ROUND(AVG(sr.sr_Rating), 1) AS avg_rating
             FROM Songs s
             LEFT JOIN Artists a      ON s.s_ArtistID    = a.art_ArtistID
             LEFT JOIN Users u        ON a.art_UserID     = u.u_UserID
             LEFT JOIN Genres g       ON s.s_GenreID      = g.g_GenreID
             LEFT JOIN AlbumSongs als ON s.s_SongID       = als.als_SongID
             LEFT JOIN Albums al      ON als.als_AlbumID  = al.al_AlbumID
+            LEFT JOIN SongRatings sr ON s.s_SongID       = sr.sr_SongID
             WHERE (%s = '' OR s.s_Name     ILIKE '%%' || %s || '%%')
               AND (%s = '' OR u.u_Username ILIKE '%%' || %s || '%%')
               AND (%s = '' OR al.al_Name   ILIKE '%%' || %s || '%%')
               AND (%s = '' OR g.g_Name     ILIKE %s)
+            GROUP BY s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate, 
+                     u.u_Username, g.g_Name, al.al_Name
             LIMIT 50
         """, (name, name, artist, artist, album, album, genre, genre))
     rows = cur.fetchall()
@@ -343,6 +346,30 @@ def unfollow_user(followed_id):
     conn.commit()
     cur.close(); conn.close()
     return jsonify({'success': True})
+
+#Search users by username (for the Following page so user can pick someone to follow)
+@app.route('/api/users/search')
+def search_users():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    q = request.args.get('q', '').strip()
+    if not q:
+        return jsonify([])
+
+    conn = get_conn()
+    cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    # exclude yourself from results so user can't follow themselves
+    cur.execute("""
+        SELECT u_UserID, u_Username
+        FROM Users
+        WHERE u_Username ILIKE %s AND u_UserID != %s
+        ORDER BY u_Username
+        LIMIT 25
+    """, ('%' + q + '%', session['user_id']))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return jsonify(rows)
 
 #Song Ratings
 @app.route('/api/ratings/song', methods=['POST'])
