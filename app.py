@@ -93,7 +93,7 @@ def login():
         return render_template('login.html', login_error=e)
     cur.close()
     conn.close()
-    return render_template('login.html', login_error="Username or password incorrect.")
+    return render_template('login.html', login_error="Username or password incorrect."), 401
 
 
 #Logout
@@ -162,7 +162,8 @@ def search_songs():
     cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     # try:
     cur.execute("""
-            SELECT s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
+            SELECT DISTINCT ON (s.s_SongID)
+                   s.s_SongID, s.s_Name, s.s_Length, s.s_ReleaseDate,
                    u.u_Username AS artist_name,
                    g.g_Name     AS genre_name,
                    al.al_Name   AS album_name
