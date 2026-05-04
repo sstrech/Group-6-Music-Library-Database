@@ -512,7 +512,7 @@
             table.border = '1';
             table.innerHTML = `
                 <thead>
-                    <tr><th>Song</th><th>Artist</th><th>Remove</th></tr>
+                    <tr><th>Song</th><th>Artist</th><th>Play</th><th>Remove</th></tr>
                 </thead>`;
 
             const tbody = document.createElement('tbody');
@@ -522,6 +522,10 @@
                 tr.innerHTML = `
                     <td>${s.s_name}</td>
                     <td>${s.artist_name || 'Unknown'}</td>
+                    <td>
+                    <!-- This button uses your existing playSong logic -->
+                    <button onclick="playSong(${s.s_songid})">▶ Play Song</button>
+                    </td>
                     <!-- pass both playlist ID and song ID to remove function -->
                     <td><button onclick="removeSongFromPlaylist(${plID}, ${s.s_songid})">Remove</button></td>
                 `;
